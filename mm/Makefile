@@ -60,6 +60,7 @@ obj-y			:= filemap.o mempool.o oom_kill.o fadvise.o \
 # Give 'page_alloc' its own module-parameter namespace
 page-alloc-y := page_alloc.o
 page-alloc-$(CONFIG_SHUFFLE_PAGE_ALLOCATOR) += shuffle.o
+obj-$(CONFIG_PAGE_ALLOC_KUNIT_TEST) += page_alloc_test.o
 
 # Give 'memory_hotplug' its own module-parameter namespace
 memory-hotplug-$(CONFIG_MEMORY_HOTPLUG) += memory_hotplug.o
