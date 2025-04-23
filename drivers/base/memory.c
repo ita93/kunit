@@ -25,6 +25,7 @@
 
 #include <linux/atomic.h>
 #include <linux/uaccess.h>
+#include <kunit/visibility.h>
 
 #define MEMORY_CLASS_NAME	"memory"
 
@@ -183,7 +184,7 @@ static inline unsigned long memblk_nr_poison(struct memory_block *mem)
 /*
  * Must acquire mem_hotplug_lock in write mode.
  */
-static int memory_block_online(struct memory_block *mem)
+VISIBLE_IF_KUNIT int memory_block_online(struct memory_block *mem)
 {
 	unsigned long start_pfn = section_nr_to_pfn(mem->start_section_nr);
 	unsigned long nr_pages = PAGES_PER_SECTION * sections_per_block;
@@ -250,6 +251,8 @@ out_notifier:
 	mem_hotplug_done();
 	return ret;
 }
+
+EXPORT_SYMBOL_IF_KUNIT(memory_block_online);
 
 /*
  * Must acquire mem_hotplug_lock in write mode.

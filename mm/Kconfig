@@ -1343,7 +1343,7 @@ config PT_RECLAIM
 	  Note: now only empty user PTE page table pages will be reclaimed.
 config PAGE_ALLOC_KUNIT_TEST
 	tristate "KUnit test for page allocator" if !KUNIT_ALL_TESTS
-	depends on KUNIT
+	depends on KUNIT && NUMA && MEMORY_HOTREMOVE
 	default KUNIT_ALL_TESTS
 	help
 	  Building unit tests for page allocator
