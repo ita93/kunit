@@ -297,16 +297,20 @@ static void test_buddy_merge_on_free(struct kunit *test)
 	// We free allpage, hence cannot drain
 }
 
-static void test_prepare_alloc_pages(struct kunit *test)
+// This test tries to verify the state of zone free area after hot plug.
+// We don't need to do any allocation in this test
+static void test_zone_buddy_list_after_hotplug(struct kunit *test)
 {
-	// Needed parameters
-	// gfp_mask
-	// page order
-	// preferred numa id
-	// node mask
-	// alloc context (this is the output of the function)
-	// GFP
-	// alloc_flags
+	// How was memory plugged
+	// populate_isolated_node()
+	//  -> add_memory(isolated_node, start, size, MMOP_ONLINE);
+	//    -> __add_memory(isolated_node, start, size, MMOP_ONLINE);
+	//      -> arch_add_memory()
+	//        -> add_pages()
+	//          -> __add_pages()
+	//            -> sparse_add_section()
+	//              -> set_section_nid()
+	//  -> walk_memory_blocks(start, size, NULL, memory_block_online_cb);
 }
 
 // Drain pcplist pages
