@@ -311,6 +311,14 @@ static void test_zone_buddy_list_after_hotplug(struct kunit *test)
 	//            -> sparse_add_section()
 	//              -> set_section_nid()
 	//  -> walk_memory_blocks(start, size, NULL, memory_block_online_cb);
+	//     -> online_pages()
+	//       -> online_pages_range()
+	//         -> (*online_page_callback)(page, order)
+	//           -> generic_online_page()
+	//             -> __free_pages_core()
+	//               -> __free_pages_core_init()
+	//                 -> __free_pages_core_init_nid()
+	//                   -> __free_pages_core_init_nid_init()
 }
 
 // Drain pcplist pages
