@@ -293,7 +293,8 @@ static void test_buddy_merge_on_free(struct kunit *test)
 	KUNIT_ASSERT_EQ(test, second_pfn, first_pfn);
 
 	// Clean up
-	__free_pages(realloc_page, order);
+	__free_pages(realloc_page, 0);
+	drain_all_pages(zone_normal);
 	// We free allpage, hence cannot drain
 }
 
@@ -316,9 +317,34 @@ static void test_zone_buddy_list_after_hotplug(struct kunit *test)
 	//         -> (*online_page_callback)(page, order)
 	//           -> generic_online_page()
 	//             -> __free_pages_core()
-	//               -> __free_pages_core_init()
-	//                 -> __free_pages_core_init_nid()
-	//                   -> __free_pages_core_init_nid_init()
+	//               -> __free_pages_ok()
+	//					-> split_large_buddy()
+	//						-> __free_one_page()	
+	struct zone* zone_normal = &NODE_DATA(isolated_node)->node_zones[ZONE_NORMAL];
+	// Observation:
+	// After hot plug, there are 32 page order-10, 1 order-0 and 1 order-1
+	// new memory falls into MIGRATE_UNMOVABLE and MIGRATE_MOVABLE type
+	int order = 0;
+	struct page *temp;
+
+	pr_info("NODE ID: %d\n", isolated_node);
+	for (order = 0; order <= MAX_PAGE_ORDER; order++) {
+		pr_info("PN: free area size of order %d after in side test is %lu \n", 
+		order, zone_normal->free_area[order].nr_free);
+		/*
+		for (int mt = 0; mt < MIGRATE_TYPES; mt++) {
+			if (!list_empty(&zone_normal->free_area[order].free_list[mt])) {
+				// printing the first entry?
+				temp = list_first_entry_or_null(&zone_normal->free_area[order].
+						free_list[mt], struct page, buddy_list);
+				pr_info("page %pS\n", temp);
+			}
+		}*/
+		if (order != MAX_PAGE_ORDER)
+			KUNIT_EXPECT_EQ(test,zone_normal->free_area[order].nr_free, 0);
+		else 
+			KUNIT_EXPECT_NE(test,zone_normal->free_area[order].nr_free, 0);
+	}
 }
 
 // Drain pcplist pages
@@ -360,6 +386,10 @@ static int test_init(struct kunit *test)
 
 	/* Also ensure we don't leave a mess for the next test .*/
 	kunit_add_action(test, action_drain_pages_all, NULL);
+	for (int porder = 0; porder <= MAX_PAGE_ORDER; porder++) {
+		pr_info("PN: free area size of order %d when preparing is %lu \n", 
+		porder, NODE_DATA(isolated_node)->node_zones[ZONE_NORMAL].free_area[porder].nr_free);
+	}
 
 	return 0;
 }
@@ -398,6 +428,8 @@ static int populate_isolated_node(struct kunit_suite *suite)
 		pr_err("Try setting/expanding movablecore=\n");
 		return -1;
 	}
+	
+	pr_info("The size is %lu (bs = %lu) \n", size, bs);
 
 	// removing memory from a real node
 	err = offline_and_remove_memory(start, size);
@@ -422,6 +454,12 @@ static int populate_isolated_node(struct kunit_suite *suite)
 			  start >> PAGE_SHIFT, (start + size) >> PAGE_SHIFT);
 		goto remove_memory;
 	}
+/*	
+	for (int porder = 0; porder <= MAX_PAGE_ORDER; porder++) {
+		pr_info("PN: free area size of order %d after finish populating is %lu \n", 
+		porder, NODE_DATA(isolated_node)->node_zones[ZONE_NORMAL].free_area[porder].nr_free);
+	}
+	*/
 	return 0;
 remove_memory:
 	if (WARN_ON(remove_memory(start, size)))
@@ -450,6 +488,7 @@ static void depopulate_isolated_node(struct kunit_suite *suite)
 static struct kunit_case test_cases[] = {
 	KUNIT_CASE_PARAM(test_alloc_fresh, alloc_fresh_gen_params),
 	KUNIT_CASE(test_buddy_merge_on_free),
+	KUNIT_CASE(test_zone_buddy_list_after_hotplug),
 	{}
 };
 
